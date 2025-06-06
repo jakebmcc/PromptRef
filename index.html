@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptRef - Notes & References</title>
+    <script src="https://unpkg.com/marked@4.3.0/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            background: #f5f5f5;
+        }
+
+        .sidebar {
+            width: 25%;
+            background: white;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .delete-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            color: #666;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-button:hover {
+            background: #f0f0f0;
+            color: #d32f2f;
+        }
+
+        .delete-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.3;
+        }
+
+        .delete-button:disabled:hover {
+            background: none;
+            color: #666;
+        }
+
+        .folder {
+            margin-bottom: 20px;
+        }
+
+        .folder-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .folder-header:hover {
+            background: #f0f0f0;
+        }
+
+        .folder-arrow {
+            transition: transform 0.2s ease;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .folder-arrow.expanded {
+            transform: rotate(90deg);
+        }
+
+        .folder-notes {
+            margin-left: 10px;
+        }
+
+        .folder-notes.collapsed {
+            display: none;
+        }
+
+        .note-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .note-item:hover {
+            background: #f0f0f0;
+        }
+
+        .note-item.active {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+        }
+
+        .note-item.dragging {
+            opacity: 0.5;
+        }
+
+        .folder.drop-target {
+            background: #e8f5e8;
+            border-radius: 4px;
+        }
+
+        .folder-header.drop-target {
+            background: #e8f5e8 !important;
+        }
+
+        .add-controls {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .add-controls input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .add-controls button {
+            padding: 6px 12px;
+            margin-right: 8px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .add-controls button:hover {
+            background: #f0f0f0;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            height: 100vh;
+        }
+
+        .editor-pane {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .editor-header {
+            background: white;
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            border-right: 1px solid #ddd;
+        }
+
+        .editor-header input {
+            width: 100%;
+            border: none;
+            font-size: 18px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        .editor-textarea {
+            flex: 1;
+            border: none;
+            border-right: 1px solid #ddd;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            background: white;
+        }
+
+        .preview-pane {
+            width: 50%;
+            background: white;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .preview-content {
+            max-width: none;
+        }
+
+        .preview-content h1, .preview-content h2, .preview-content h3 {
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+
+        .preview-content p {
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+        .preview-content code {
+            background: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        .preview-content pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .command-palette {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            min-width: 300px;
+        }
+
+        .palette-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .palette-item:last-child {
+            border-bottom: none;
+        }
+
+        .palette-item:hover, .palette-item.selected {
+            background: #f0f0f0;
+        }
+
+        .palette-item.selected {
+            background: #e3f2fd;
+        }
+
+        .copy-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .copy-button:hover {
+            background: #1976d2;
+        }
+
+        .reference-block {
+            background: #f8f9fa;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        .reference-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1976d2;
+        }
+
+        .folder-header.selected {
+            background: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>
+            <span>PromptRef</span>
+            <button id="delete-button" class="delete-button" onclick="deleteCurrentNote()" title="Delete selected note">
+                🗑️
+            </button>
+        </h2>
+        <div id="folders-container"></div>
+        <div class="add-controls">
+            <input type="text" id="new-folder-input" placeholder="New folder name">
+            <button onclick="addFolder()">Add Folder</button>
+            <input type="text" id="new-note-input" placeholder="New note title">
+            <button onclick="addNote()">Add Note</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="editor-pane">
+            <div class="editor-header">
+                <input type="text" id="note-title" placeholder="Note title...">
+            </div>
+            <textarea id="editor" class="editor-textarea" placeholder="Start writing your note in markdown..."></textarea>
+            <div id="command-palette" class="command-palette" style="display: none;"></div>
+        </div>
+        <div class="preview-pane">
+            <div id="preview" class="preview-content"></div>
+        </div>
+    </div>
+
+    <button class="copy-button" onclick="copyCurrentNote()">Copy All</button>
+
+    <script>
+        // Data structure and storage
+        let data = {
+            folders: {},
+            folderStates: {}, // Track expanded/collapsed state
+            currentFolder: null,
+            currentNote: null,
+            selectedType: 'note' // Track whether a note or folder is selected
+        };
+
+        let paletteVisible = false;
+        let paletteIndex = -1;
+        let paletteQuery = '';
+        let palettePosition = 0;
+
+        // Load data from localStorage
+        function loadData() {
+            const saved = localStorage.getItem('promptref-data');
+            if (saved) {
+                data = JSON.parse(saved);
+                // Ensure folderStates exists
+                if (!data.folderStates) {
+                    data.folderStates = {};
+                }
+                // Initialize folderStates for any folders that don't have state
+                Object.keys(data.folders).forEach(folderName => {
+                    if (!(folderName in data.folderStates)) {
+                        data.folderStates[folderName] = true; // Default to expanded
+                    }
+                });
+            } else {
+                // Initialize with sample data
+                data.folders = {
+                    'General': {
+                        'Welcome Note': {
+                            title: 'Welcome Note',
+                            body: '# Welcome to PromptRef\n\nThis is your first note! Try:\n\n- Type `/` to reference other notes\n- Edit this markdown and see live preview\n- Create folders and notes from the sidebar\n- Use the Copy All button to copy the current note'
+                        }
+                    }
+                };
+                data.folderStates = {
+                    'General': true
+                };
+                data.currentFolder = 'General';
+                data.currentNote = 'Welcome Note';
+                saveData();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('promptref-data', JSON.stringify(data));
+        }
+
+        // UI Rendering
+        function renderFolders() {
+            const container = document.getElementById('folders-container');
+            container.innerHTML = '';
+
+            Object.keys(data.folders).forEach(folderName => {
+                const folderDiv = document.createElement('div');
+                folderDiv.className = 'folder';
+                folderDiv.setAttribute('data-folder', folderName);
+
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'folder-header';
+                
+                // Highlight selected folder
+                if (data.selectedType === 'folder' && data.currentFolder === folderName) {
+                    headerDiv.classList.add('selected');
+                }
+                
+                const folderNameSpan = document.createElement('span');
+                folderNameSpan.textContent = folderName;
+                
+                const arrowSpan = document.createElement('span');
+                arrowSpan.className = 'folder-arrow';
+                arrowSpan.textContent = '▶';
+                if (data.folderStates[folderName]) {
+                    arrowSpan.classList.add('expanded');
+                }
+                
+                headerDiv.appendChild(folderNameSpan);
+                headerDiv.appendChild(arrowSpan);
+                
+                // Handle folder header clicks - left side for selection, right side for toggle
+                folderNameSpan.onclick = (e) => {
+                    e.stopPropagation();
+                    selectFolder(folderName);
+                };
+                arrowSpan.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFolder(folderName);
+                };
+                
+                // Make folder header a drop target
+                setupDropTarget(headerDiv, folderName);
+                
+                folderDiv.appendChild(headerDiv);
+
+                const notesDiv = document.createElement('div');
+                notesDiv.className = 'folder-notes';
+                if (!data.folderStates[folderName]) {
+                    notesDiv.classList.add('collapsed');
+                }
+
+                Object.keys(data.folders[folderName]).forEach(noteTitle => {
+                    const noteDiv = document.createElement('div');
+                    noteDiv.className = 'note-item';
+                    noteDiv.setAttribute('draggable', 'true');
+                    noteDiv.setAttribute('data-note', noteTitle);
+                    noteDiv.setAttribute('data-folder', folderName);
+                    
+                    if (data.selectedType === 'note' && data.currentFolder === folderName && data.currentNote === noteTitle) {
+                        noteDiv.classList.add('active');
+                    }
+                    noteDiv.textContent = noteTitle;
+                    noteDiv.onclick = () => selectNote(folderName, noteTitle);
+                    
+                    // Setup drag events
+                    setupDragEvents(noteDiv, folderName, noteTitle);
+                    
+                    notesDiv.appendChild(noteDiv);
+                });
+
+                folderDiv.appendChild(notesDiv);
+                container.appendChild(folderDiv);
+            });
+        }
+
+        function toggleFolder(folderName) {
+            data.folderStates[folderName] = !data.folderStates[folderName];
+            saveData();
+            renderFolders();
+        }
+
+        function setupDragEvents(noteDiv, folderName, noteTitle) {
+            noteDiv.addEventListener('dragstart', function(e) {
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    sourceFolder: folderName,
+                    noteTitle: noteTitle
+                }));
+                noteDiv.classList.add('dragging');
+            });
+
+            noteDiv.addEventListener('dragend', function(e) {
+                noteDiv.classList.remove('dragging');
+                // Clear any drop targets
+                document.querySelectorAll('.drop-target').forEach(el => {
+                    el.classList.remove('drop-target');
+                });
+            });
+        }
+
+        function setupDropTarget(element, targetFolder) {
+            element.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                element.classList.add('drop-target');
+            });
+
+            element.addEventListener('dragleave', function(e) {
+                element.classList.remove('drop-target');
+            });
+
+            element.addEventListener('drop', function(e) {
+                e.preventDefault();
+                element.classList.remove('drop-target');
+                
+                try {
+                    const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    const { sourceFolder, noteTitle } = dragData;
+                    
+                    if (sourceFolder !== targetFolder) {
+                        moveNote(sourceFolder, noteTitle, targetFolder);
+                    }
+                } catch (err) {
+                    console.error('Error handling drop:', err);
+                }
+            });
+        }
+
+        function moveNote(sourceFolder, noteTitle, targetFolder) {
+            // Get the note data
+            const note = data.folders[sourceFolder][noteTitle];
+            
+            // Remove from source folder
+            delete data.folders[sourceFolder][noteTitle];
+            
+            // Add to target folder
+            data.folders[targetFolder][noteTitle] = note;
+            
+            // Update current selection if the moved note was selected
+            if (data.currentFolder === sourceFolder && data.currentNote === noteTitle) {
+                data.currentFolder = targetFolder;
+            }
+            
+            // Ensure target folder is expanded
+            data.folderStates[targetFolder] = true;
+            
+            saveData();
+            renderFolders();
+        }
+
+        function selectFolder(folderName) {
+            data.currentFolder = folderName;
+            data.currentNote = null;
+            data.selectedType = 'folder';
+            
+            // Clear the editor when folder is selected
+            document.getElementById('note-title').value = '';
+            document.getElementById('editor').value = '';
+            document.getElementById('preview').innerHTML = '';
+            
+            renderFolders();
+            updateDeleteButton();
+            saveData();
+        }
+
+        function selectNote(folderName, noteTitle) {
+            data.currentFolder = folderName;
+            data.currentNote = noteTitle;
+            data.selectedType = 'note';
+            const note = data.folders[folderName][noteTitle];
+            
+            document.getElementById('note-title').value = note.title;
+            document.getElementById('editor').value = note.body;
+            updatePreview();
+            renderFolders();
+            updateDeleteButton();
+            saveData();
+        }
+
+        function updatePreview() {
+            const body = document.getElementById('editor').value;
+            const processedBody = processReferences(body);
+            document.getElementById('preview').innerHTML = marked.parse(processedBody);
+        }
+
+        function processReferences(text) {
+            return text.replace(/\{\{([^}]+)\}\}/g, (match, content) => {
+                const lines = content.split('\n');
+                const title = lines[0];
+                const body = lines.slice(2).join('\n'); // Skip title and separator
+                
+                return `<div class="reference-block">
+                    <div class="reference-title">${title}</div>
+                    <div>${marked.parse(body)}</div>
+                </div>`;
+            });
+        }
+
+        // Note/Folder management
+        function addFolder() {
+            const input = document.getElementById('new-folder-input');
+            const name = input.value.trim();
+            if (name && !data.folders[name]) {
+                data.folders[name] = {};
+                data.folderStates[name] = true; // New folders start expanded
+                input.value = '';
+                renderFolders();
+                saveData();
+            }
+        }
+
+        function addNote() {
+            const input = document.getElementById('new-note-input');
+            const title = input.value.trim();
+            if (title && data.currentFolder) {
+                if (!data.folders[data.currentFolder][title]) {
+                    data.folders[data.currentFolder][title] = {
+                        title: title,
+                        body: ''
+                    };
+                    input.value = '';
+                    selectNote(data.currentFolder, title);
+                }
+            }
+        }
+
+        // Command palette
+        function showCommandPalette(query, position) {
+            const allNotes = [];
+            Object.keys(data.folders).forEach(folder => {
+                Object.keys(data.folders[folder]).forEach(noteTitle => {
+                    if (noteTitle !== data.currentNote) { // Don't show current note
+                        allNotes.push({
+                            folder,
+                            title: noteTitle,
+                            note: data.folders[folder][noteTitle]
+                        });
+                    }
+                });
+            });
+
+            // Fuzzy search
+            const filtered = allNotes.filter(item => 
+                item.title.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 5);
+
+            const palette = document.getElementById('command-palette');
+            
+            if (filtered.length === 0) {
+                palette.style.display = 'none';
+                paletteVisible = false;
+                return;
+            }
+
+            palette.innerHTML = '';
+            filtered.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'palette-item';
+                if (index === paletteIndex) div.classList.add('selected');
+                div.textContent = item.title;
+                div.onclick = () => insertReference(item.note);
+                palette.appendChild(div);
+            });
+
+            // Position palette
+            const editor = document.getElementById('editor');
+            const rect = editor.getBoundingClientRect();
+            const lines = editor.value.substr(0, position).split('\n');
+            const lineHeight = 22; // Approximate line height
+            
+            palette.style.display = 'block';
+            palette.style.left = '40px';
+            palette.style.top = (lines.length * lineHeight + 60) + 'px';
+            
+            paletteVisible = true;
+        }
+
+        function insertReference(note) {
+            const editor = document.getElementById('editor');
+            const pos = editor.selectionStart;
+            const text = editor.value;
+            
+            // Find the "/" character position
+            const beforeCursor = text.substr(0, pos);
+            const slashPos = beforeCursor.lastIndexOf('/');
+            
+            const reference = `{{${note.title}\n---\n${note.body}}}`;
+            const newText = text.substring(0, slashPos) + reference + text.substring(pos);
+            
+            editor.value = newText;
+            editor.focus();
+            editor.setSelectionRange(slashPos + reference.length, slashPos + reference.length);
+            
+            hideCommandPalette();
+            updatePreview();
+            saveCurrentNote();
+        }
+
+        function hideCommandPalette() {
+            document.getElementById('command-palette').style.display = 'none';
+            paletteVisible = false;
+            paletteIndex = -1;
+        }
+
+        function saveCurrentNote() {
+            if (data.currentFolder && data.currentNote) {
+                const newTitle = document.getElementById('note-title').value.trim();
+                const body = document.getElementById('editor').value;
+                const oldTitle = data.currentNote;
+                
+                // If title changed, we need to update the key in the data structure
+                if (newTitle !== oldTitle && newTitle !== '') {
+                    // Get the note data
+                    const noteData = data.folders[data.currentFolder][oldTitle];
+                    
+                    // Delete the old key
+                    delete data.folders[data.currentFolder][oldTitle];
+                    
+                    // Create new key with updated data
+                    data.folders[data.currentFolder][newTitle] = {
+                        title: newTitle,
+                        body: body
+                    };
+                    
+                    // Update current selection to new title
+                    data.currentNote = newTitle;
+                } else {
+                    // Title didn't change, just update the body
+                    data.folders[data.currentFolder][data.currentNote].body = body;
+                }
+                
+                renderFolders(); // Update sidebar to show changes
+                updateDeleteButton(); // Update delete button tooltip
+                saveData();
+            }
+        }
+
+        function copyCurrentNote() {
+            const content = document.getElementById('editor').value;
+            navigator.clipboard.writeText(content).then(() => {
+                const btn = document.querySelector('.copy-button');
+                const original = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = original, 1000);
+            });
+        }
+
+        function deleteCurrentNote() {
+            if (data.selectedType === 'folder' && data.currentFolder) {
+                deleteCurrentFolder();
+            } else if (data.selectedType === 'note' && data.currentFolder && data.currentNote) {
+                deleteCurrentNoteOnly();
+            }
+        }
+
+        function deleteCurrentFolder() {
+            const folderName = data.currentFolder;
+            const noteCount = Object.keys(data.folders[folderName]).length;
+            
+            // Confirm deletion
+            let confirmMessage = `Are you sure you want to delete the folder "${folderName}"?`;
+            if (noteCount > 0) {
+                confirmMessage += `\n\nThis will also delete ${noteCount} note${noteCount === 1 ? '' : 's'} inside it.`;
+            }
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // Remove the folder and its folder state
+            delete data.folders[folderName];
+            delete data.folderStates[folderName];
+
+            // Find another folder/note to select
+            let newSelection = null;
+            const remainingFolders = Object.keys(data.folders);
+            
+            if (remainingFolders.length > 0) {
+                const firstFolder = remainingFolders[0];
+                const notesInFolder = Object.keys(data.folders[firstFolder]);
+                
+                if (notesInFolder.length > 0) {
+                    // Select first note in first remaining folder
+                    newSelection = {
+                        type: 'note',
+                        folder: firstFolder,
+                        note: notesInFolder[0]
+                    };
+                } else {
+                    // Select the folder itself
+                    newSelection = {
+                        type: 'folder',
+                        folder: firstFolder,
+                        note: null
+                    };
+                }
+            }
+
+            // Update selection
+            if (newSelection) {
+                data.currentFolder = newSelection.folder;
+                data.currentNote = newSelection.note;
+                data.selectedType = newSelection.type;
+                
+                if (newSelection.type === 'note') {
+                    selectNote(newSelection.folder, newSelection.note);
+                } else {
+                    selectFolder(newSelection.folder);
+                }
+            } else {
+                // No folders left, clear everything
+                data.currentFolder = null;
+                data.currentNote = null;
+                data.selectedType = 'note';
+                document.getElementById('note-title').value = '';
+                document.getElementById('editor').value = '';
+                document.getElementById('preview').innerHTML = '';
+                renderFolders();
+            }
+
+            updateDeleteButton();
+            saveData();
+        }
+
+        function deleteCurrentNoteOnly() {
+            if (!data.currentFolder || !data.currentNote) {
+                return; // No note selected
+            }
+
+            // Confirm deletion
+            if (!confirm(`Are you sure you want to delete "${data.currentNote}"?`)) {
+                return;
+            }
+
+            // Remove the note
+            delete data.folders[data.currentFolder][data.currentNote];
+
+            // Find another note to select, or clear the editor
+            let newSelection = null;
+            
+            // First try to find another note in the same folder
+            const remainingNotes = Object.keys(data.folders[data.currentFolder]);
+            if (remainingNotes.length > 0) {
+                newSelection = {
+                    type: 'note',
+                    folder: data.currentFolder,
+                    note: remainingNotes[0]
+                };
+            } else {
+                // No notes left in folder, select the folder itself
+                newSelection = {
+                    type: 'folder',
+                    folder: data.currentFolder,
+                    note: null
+                };
+            }
+
+            // Update selection
+            if (newSelection.type === 'note') {
+                selectNote(newSelection.folder, newSelection.note);
+            } else {
+                selectFolder(newSelection.folder);
+            }
+
+            updateDeleteButton();
+            saveData();
+        }
+
+        function updateDeleteButton() {
+            const deleteBtn = document.getElementById('delete-button');
+            
+            if (data.selectedType === 'folder' && data.currentFolder) {
+                deleteBtn.disabled = false;
+                const noteCount = Object.keys(data.folders[data.currentFolder]).length;
+                deleteBtn.title = `Delete folder "${data.currentFolder}"${noteCount > 0 ? ` (${noteCount} notes)` : ''}`;
+            } else if (data.selectedType === 'note' && data.currentFolder && data.currentNote) {
+                deleteBtn.disabled = false;
+                deleteBtn.title = `Delete note "${data.currentNote}"`;
+            } else {
+                deleteBtn.disabled = true;
+                deleteBtn.title = 'No note or folder selected';
+            }
+        }
+
+        // Event listeners
+        document.getElementById('note-title').addEventListener('input', saveCurrentNote);
+        document.getElementById('editor').addEventListener('input', function(e) {
+            updatePreview();
+            saveCurrentNote();
+            
+            // Command palette logic
+            const pos = e.target.selectionStart;
+            const text = e.target.value;
+            const beforeCursor = text.substr(0, pos);
+            const lastSlash = beforeCursor.lastIndexOf('/');
+            
+            if (lastSlash !== -1) {
+                const afterSlash = beforeCursor.substr(lastSlash + 1);
+                if (afterSlash.indexOf(' ') === -1 && afterSlash.indexOf('\n') === -1) {
+                    paletteQuery = afterSlash;
+                    palettePosition = pos;
+                    showCommandPalette(afterSlash, pos);
+                    return;
+                }
+            }
+            
+            if (paletteVisible) {
+                hideCommandPalette();
+            }
+        });
+
+        document.getElementById('editor').addEventListener('keydown', function(e) {
+            if (paletteVisible) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const items = document.querySelectorAll('.palette-item');
+                    paletteIndex = Math.min(paletteIndex + 1, items.length - 1);
+                    items.forEach((item, i) => item.classList.toggle('selected', i === paletteIndex));
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const items = document.querySelectorAll('.palette-item');
+                    paletteIndex = Math.max(paletteIndex - 1, 0);
+                    items.forEach((item, i) => item.classList.toggle('selected', i === paletteIndex));
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const selectedItem = document.querySelector('.palette-item.selected');
+                    if (selectedItem) {
+                        selectedItem.click();
+                    }
+                } else if (e.key === 'Escape') {
+                    hideCommandPalette();
+                }
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (paletteVisible && !document.getElementById('command-palette').contains(e.target)) {
+                hideCommandPalette();
+            }
+        });
+
+        // Initialize app
+        loadData();
+        renderFolders();
+        if (data.currentFolder && data.currentNote) {
+            selectNote(data.currentFolder, data.currentNote);
+        }
+        updateDeleteButton();
+    </script>
+</body>
+</html> 
