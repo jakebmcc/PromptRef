@@ -281,10 +281,21 @@
             font-weight: 600;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
         }
 
         .copy-button:hover {
             background: #1976d2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .copy-button.copied {
+            background: #4caf50;
+            transform: scale(1.05);
         }
 
         .reference-block {
@@ -337,7 +348,10 @@
         </div>
     </div>
 
-    <button class="copy-button" onclick="copyCurrentNote()">Copy All</button>
+    <button class="copy-button" onclick="copyCurrentNote()">
+        <span>📋</span>
+        <span id="copy-text">Copy</span>
+    </button>
 
     <script>
         // Data structure and storage
@@ -732,9 +746,26 @@
             const content = document.getElementById('editor').value;
             navigator.clipboard.writeText(content).then(() => {
                 const btn = document.querySelector('.copy-button');
-                const original = btn.textContent;
-                btn.textContent = 'Copied!';
-                setTimeout(() => btn.textContent = original, 1000);
+                const textSpan = document.getElementById('copy-text');
+                
+                // Change appearance to show success
+                btn.classList.add('copied');
+                textSpan.textContent = 'Copied!';
+                
+                // Reset after 1.5 seconds
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    textSpan.textContent = 'Copy';
+                }, 1500);
+            }).catch(() => {
+                // Fallback if clipboard API fails
+                const btn = document.querySelector('.copy-button');
+                const textSpan = document.getElementById('copy-text');
+                
+                textSpan.textContent = 'Failed';
+                setTimeout(() => {
+                    textSpan.textContent = 'Copy';
+                }, 1500);
             });
         }
 
