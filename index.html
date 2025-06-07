@@ -25,6 +25,8 @@
             border-right: 1px solid #ddd;
             overflow-y: auto;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
 
         .sidebar h2 {
@@ -34,6 +36,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-shrink: 0;
         }
 
         .delete-button {
@@ -133,10 +136,16 @@
             background: #e8f5e8 !important;
         }
 
+        #folders-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
         .add-controls {
-            margin-top: 20px;
+            margin-top: auto;
             padding-top: 20px;
             border-top: 1px solid #eee;
+            flex-shrink: 0;
         }
 
         .add-controls input {
@@ -147,9 +156,14 @@
             border-radius: 4px;
         }
 
+        .add-controls .button-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+        }
+
         .add-controls button {
             padding: 6px 12px;
-            margin-right: 8px;
             border: 1px solid #ddd;
             background: white;
             border-radius: 4px;
@@ -329,9 +343,13 @@
         <div id="folders-container"></div>
         <div class="add-controls">
             <input type="text" id="new-folder-input" placeholder="New folder name">
-            <button onclick="addFolder()">Add Folder</button>
+            <div class="button-row">
+                <button onclick="addFolder()">Add Folder</button>
+            </div>
             <input type="text" id="new-note-input" placeholder="New note title">
-            <button onclick="addNote()">Add Note</button>
+            <div class="button-row">
+                <button onclick="addNote()">Add Note</button>
+            </div>
         </div>
     </div>
 
