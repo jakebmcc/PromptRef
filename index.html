@@ -148,10 +148,16 @@
             flex-shrink: 0;
         }
 
-        .add-controls input {
-            width: 100%;
-            padding: 8px;
+        .add-controls .input-row {
+            display: flex;
+            gap: 8px;
             margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .add-controls input {
+            flex: 1;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
@@ -169,6 +175,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
+            flex-shrink: 0;
         }
 
         .add-controls button:hover {
@@ -372,15 +379,15 @@
         </h2>
         <div id="folders-container"></div>
         <div class="add-controls">
-            <input type="text" id="new-folder-input" placeholder="New folder name">
-            <div class="button-row">
+            <div class="input-row">
+                <input type="text" id="new-folder-input" placeholder="New folder name">
                 <button class="add-folder-btn" onclick="addFolder()">
                     <span>📁</span>
                     <span>Add</span>
                 </button>
             </div>
-            <input type="text" id="new-note-input" placeholder="New note title">
-            <div class="button-row">
+            <div class="input-row">
+                <input type="text" id="new-note-input" placeholder="New note title">
                 <button class="add-note-btn" onclick="addNote()">
                     <span>📝</span>
                     <span>Add</span>
