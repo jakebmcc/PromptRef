@@ -175,6 +175,21 @@
             background: #f0f0f0;
         }
 
+        .add-controls .add-folder-btn {
+            background: #2196f3;
+            color: white;
+            border: 1px solid #2196f3;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        .add-controls .add-folder-btn:hover {
+            background: #1976d2;
+            border-color: #1976d2;
+        }
+
         .main-content {
             flex: 1;
             display: flex;
@@ -344,7 +359,10 @@
         <div class="add-controls">
             <input type="text" id="new-folder-input" placeholder="New folder name">
             <div class="button-row">
-                <button onclick="addFolder()">Add Folder</button>
+                <button class="add-folder-btn" onclick="addFolder()">
+                    <span>📁</span>
+                    <span>Add</span>
+                </button>
             </div>
             <input type="text" id="new-note-input" placeholder="New note title">
             <div class="button-row">
