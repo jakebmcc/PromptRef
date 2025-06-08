@@ -190,6 +190,21 @@
             border-color: #1976d2;
         }
 
+        .add-controls .add-note-btn {
+            background: #2196f3;
+            color: white;
+            border: 1px solid #2196f3;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        .add-controls .add-note-btn:hover {
+            background: #1976d2;
+            border-color: #1976d2;
+        }
+
         .main-content {
             flex: 1;
             display: flex;
@@ -366,7 +381,10 @@
             </div>
             <input type="text" id="new-note-input" placeholder="New note title">
             <div class="button-row">
-                <button onclick="addNote()">Add Note</button>
+                <button class="add-note-btn" onclick="addNote()">
+                    <span>📝</span>
+                    <span>Add</span>
+                </button>
             </div>
         </div>
     </div>
