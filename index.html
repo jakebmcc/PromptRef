@@ -39,6 +39,12 @@
             flex-shrink: 0;
         }
 
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .delete-button {
             background: none;
             border: none;
@@ -65,6 +71,44 @@
         .delete-button:disabled:hover {
             background: none;
             color: #666;
+        }
+
+        .add-folder-header-btn {
+            background: #2196f3;
+            color: white;
+            border: 1px solid #2196f3;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        .add-folder-header-btn:hover {
+            background: #1976d2;
+            border-color: #1976d2;
+        }
+
+        .add-note-header-btn {
+            background: #2196f3;
+            color: white;
+            border: 1px solid #2196f3;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        .add-note-header-btn:hover {
+            background: #1976d2;
+            border-color: #1976d2;
         }
 
         .folder {
@@ -373,27 +417,21 @@
     <div class="sidebar">
         <h2>
             <span>PromptRef</span>
-            <button id="delete-button" class="delete-button" onclick="deleteCurrentNote()" title="Delete selected note">
-                🗑️
-            </button>
-        </h2>
-        <div id="folders-container"></div>
-        <div class="add-controls">
-            <div class="input-row">
-                <input type="text" id="new-folder-input" placeholder="New folder name">
-                <button class="add-folder-btn" onclick="addFolder()">
+            <div class="header-buttons">
+                <button class="add-folder-header-btn" onclick="addNewFolder()" title="Add new folder">
                     <span>📁</span>
                     <span>Add</span>
                 </button>
-            </div>
-            <div class="input-row">
-                <input type="text" id="new-note-input" placeholder="New note title">
-                <button class="add-note-btn" onclick="addNote()">
+                <button class="add-note-header-btn" onclick="addNewNote()" title="Add new note">
                     <span>📝</span>
                     <span>Add</span>
                 </button>
+                <button id="delete-button" class="delete-button" onclick="deleteCurrentNote()" title="Delete selected note">
+                    🗑️
+                </button>
             </div>
-        </div>
+        </h2>
+        <div id="folders-container"></div>
     </div>
 
     <div class="main-content">
@@ -418,10 +456,13 @@
         // Data structure and storage
         let data = {
             folders: {},
+            folderMetadata: {}, // Store folder names and descriptions
             folderStates: {}, // Track expanded/collapsed state
             currentFolder: null,
             currentNote: null,
-            selectedType: 'note' // Track whether a note or folder is selected
+            selectedType: 'note', // Track whether a note or folder is selected
+            pendingNewNote: null, // Track unmodified new notes for auto-deletion
+            pendingNewFolder: null // Track unmodified new folders for auto-deletion
         };
 
         let paletteVisible = false;
@@ -438,10 +479,21 @@
                 if (!data.folderStates) {
                     data.folderStates = {};
                 }
+                // Ensure folderMetadata exists
+                if (!data.folderMetadata) {
+                    data.folderMetadata = {};
+                }
                 // Initialize folderStates for any folders that don't have state
                 Object.keys(data.folders).forEach(folderName => {
                     if (!(folderName in data.folderStates)) {
                         data.folderStates[folderName] = true; // Default to expanded
+                    }
+                    // Initialize folder metadata if missing
+                    if (!(folderName in data.folderMetadata)) {
+                        data.folderMetadata[folderName] = {
+                            name: folderName,
+                            description: ''
+                        };
                     }
                 });
             } else {
@@ -452,6 +504,12 @@
                             title: 'Welcome Note',
                             body: '# Welcome to PromptRef\n\nThis is your first note! Try:\n\n- Type `/` to reference other notes\n- Edit this markdown and see live preview\n- Create folders and notes from the sidebar\n- Use the Copy All button to copy the current note'
                         }
+                    }
+                };
+                data.folderMetadata = {
+                    'General': {
+                        name: 'General',
+                        description: 'Your general notes and ideas'
                     }
                 };
                 data.folderStates = {
@@ -486,7 +544,9 @@
                 }
                 
                 const folderNameSpan = document.createElement('span');
-                folderNameSpan.textContent = folderName;
+                // Use display name from metadata, fallback to key name
+                const displayName = data.folderMetadata[folderName]?.name || folderName;
+                folderNameSpan.textContent = displayName;
                 
                 const arrowSpan = document.createElement('span');
                 arrowSpan.className = 'folder-arrow';
@@ -617,14 +677,18 @@
         }
 
         function selectFolder(folderName) {
+            // Clean up any pending items before switching
+            cleanupPendingItems();
+            
             data.currentFolder = folderName;
             data.currentNote = null;
             data.selectedType = 'folder';
             
-            // Clear the editor when folder is selected
-            document.getElementById('note-title').value = '';
-            document.getElementById('editor').value = '';
-            document.getElementById('preview').innerHTML = '';
+            // Populate editor with folder data
+            const folderData = data.folderMetadata[folderName] || { name: folderName, description: '' };
+            document.getElementById('note-title').value = folderData.name;
+            document.getElementById('editor').value = folderData.description;
+            document.getElementById('preview').innerHTML = marked.parse(folderData.description);
             
             renderFolders();
             updateDeleteButton();
@@ -632,6 +696,9 @@
         }
 
         function selectNote(folderName, noteTitle) {
+            // Clean up any pending items before switching
+            cleanupPendingItems();
+            
             data.currentFolder = folderName;
             data.currentNote = noteTitle;
             data.selectedType = 'note';
@@ -671,110 +738,179 @@
             if (name && !data.folders[name]) {
                 data.folders[name] = {};
                 data.folderStates[name] = true; // New folders start expanded
+                data.folderMetadata[name] = {
+                    name: name,
+                    description: ''
+                };
                 input.value = '';
                 renderFolders();
                 saveData();
             }
         }
 
-        function addNote() {
-            const input = document.getElementById('new-note-input');
-            const title = input.value.trim();
-            if (title && data.currentFolder) {
-                if (!data.folders[data.currentFolder][title]) {
-                    data.folders[data.currentFolder][title] = {
-                        title: title,
-                        body: ''
+        function addNewFolder() {
+            // Clean up any existing pending items
+            cleanupPendingItems();
+            
+            // Create new folder with default name
+            const folderName = 'New Folder';
+            data.folders[folderName] = {};
+            data.folderStates[folderName] = true; // New folders start expanded
+            data.folderMetadata[folderName] = {
+                name: folderName,
+                description: ''
+            };
+            
+            // Mark as pending for auto-deletion
+            data.pendingNewFolder = folderName;
+            
+            // Select the new folder
+            selectFolder(folderName);
+        }
+
+        function addNewNote() {
+            // Clean up any existing pending items
+            cleanupPendingItems();
+            
+            // Determine target folder
+            let targetFolder = data.currentFolder;
+            
+            // If no folder is selected or selected item is not in a folder, use first available folder
+            if (!targetFolder || !data.folders[targetFolder]) {
+                const availableFolders = Object.keys(data.folders);
+                if (availableFolders.length === 0) {
+                    // No folders exist, create a default one
+                    const defaultFolder = 'General';
+                    data.folders[defaultFolder] = {};
+                    data.folderStates[defaultFolder] = true;
+                    data.folderMetadata[defaultFolder] = {
+                        name: defaultFolder,
+                        description: ''
                     };
-                    input.value = '';
-                    selectNote(data.currentFolder, title);
+                    targetFolder = defaultFolder;
+                } else {
+                    targetFolder = availableFolders[0];
                 }
             }
+            
+            // Create new note with default title
+            const noteTitle = 'New Note';
+            data.folders[targetFolder][noteTitle] = {
+                title: noteTitle,
+                body: ''
+            };
+            
+            // Mark as pending for auto-deletion
+            data.pendingNewNote = {
+                folder: targetFolder,
+                note: noteTitle
+            };
+            
+            // Select the new note
+            selectNote(targetFolder, noteTitle);
         }
 
-        // Command palette
-        function showCommandPalette(query, position) {
-            const allNotes = [];
-            Object.keys(data.folders).forEach(folder => {
-                Object.keys(data.folders[folder]).forEach(noteTitle => {
-                    if (noteTitle !== data.currentNote) { // Don't show current note
-                        allNotes.push({
-                            folder,
-                            title: noteTitle,
-                            note: data.folders[folder][noteTitle]
-                        });
+        function cleanupPendingItems() {
+            cleanupPendingNewNote();
+            cleanupPendingNewFolder();
+        }
+
+        function cleanupPendingNewNote() {
+            if (data.pendingNewNote) {
+                const { folder, note } = data.pendingNewNote;
+                
+                // Check if note still exists and is blank
+                if (data.folders[folder] && data.folders[folder][note]) {
+                    const currentTitle = document.getElementById('note-title').value.trim();
+                    const currentBody = document.getElementById('editor').value.trim();
+                    
+                    // Delete if note is truly blank: no meaningful title AND no body content
+                    const isBlankTitle = currentTitle === '' || currentTitle === 'New Note';
+                    const isBlankBody = currentBody === '';
+                    
+                    if (isBlankTitle && isBlankBody) {
+                        delete data.folders[folder][note];
+                        
+                        // If we just deleted the currently selected note, clear the editor
+                        if (data.currentFolder === folder && data.currentNote === note) {
+                            data.currentNote = null;
+                            document.getElementById('note-title').value = '';
+                            document.getElementById('editor').value = '';
+                            document.getElementById('preview').innerHTML = '';
+                        }
+                        
+                        // Update the sidebar to reflect the deletion
+                        renderFolders();
+                        saveData();
                     }
-                });
-            });
-
-            // Fuzzy search
-            const filtered = allNotes.filter(item => 
-                item.title.toLowerCase().includes(query.toLowerCase())
-            ).slice(0, 5);
-
-            const palette = document.getElementById('command-palette');
-            
-            if (filtered.length === 0) {
-                palette.style.display = 'none';
-                paletteVisible = false;
-                return;
+                }
+                
+                data.pendingNewNote = null;
             }
-
-            palette.innerHTML = '';
-            filtered.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'palette-item';
-                if (index === paletteIndex) div.classList.add('selected');
-                div.textContent = item.title;
-                div.onclick = () => insertReference(item.note);
-                palette.appendChild(div);
-            });
-
-            // Position palette
-            const editor = document.getElementById('editor');
-            const rect = editor.getBoundingClientRect();
-            const lines = editor.value.substr(0, position).split('\n');
-            const lineHeight = 22; // Approximate line height
-            
-            palette.style.display = 'block';
-            palette.style.left = '40px';
-            palette.style.top = (lines.length * lineHeight + 60) + 'px';
-            
-            paletteVisible = true;
         }
 
-        function insertReference(note) {
-            const editor = document.getElementById('editor');
-            const pos = editor.selectionStart;
-            const text = editor.value;
-            
-            // Find the "/" character position
-            const beforeCursor = text.substr(0, pos);
-            const slashPos = beforeCursor.lastIndexOf('/');
-            
-            const reference = `{{${note.title}\n---\n${note.body}}}`;
-            const newText = text.substring(0, slashPos) + reference + text.substring(pos);
-            
-            editor.value = newText;
-            editor.focus();
-            editor.setSelectionRange(slashPos + reference.length, slashPos + reference.length);
-            
-            hideCommandPalette();
-            updatePreview();
-            saveCurrentNote();
-        }
-
-        function hideCommandPalette() {
-            document.getElementById('command-palette').style.display = 'none';
-            paletteVisible = false;
-            paletteIndex = -1;
+        function cleanupPendingNewFolder() {
+            if (data.pendingNewFolder) {
+                const folderName = data.pendingNewFolder;
+                
+                // Check if folder still exists and is blank
+                if (data.folders[folderName] && data.folderMetadata[folderName]) {
+                    const currentTitle = document.getElementById('note-title').value.trim();
+                    const currentBody = document.getElementById('editor').value.trim();
+                    
+                    // Delete if folder is truly blank: no meaningful name AND no description
+                    const isBlankName = currentTitle === '' || currentTitle === 'New Folder';
+                    const isBlankDescription = currentBody === '';
+                    const hasNoNotes = Object.keys(data.folders[folderName]).length === 0;
+                    
+                    if (isBlankName && isBlankDescription && hasNoNotes) {
+                        delete data.folders[folderName];
+                        delete data.folderStates[folderName];
+                        delete data.folderMetadata[folderName];
+                        
+                        // If we just deleted the currently selected folder, clear selection
+                        if (data.currentFolder === folderName) {
+                            data.currentFolder = null;
+                            data.selectedType = 'note';
+                            document.getElementById('note-title').value = '';
+                            document.getElementById('editor').value = '';
+                            document.getElementById('preview').innerHTML = '';
+                        }
+                        
+                        // Update the sidebar to reflect the deletion
+                        renderFolders();
+                        saveData();
+                    }
+                }
+                
+                data.pendingNewFolder = null;
+            }
         }
 
         function saveCurrentNote() {
+            if (data.selectedType === 'folder') {
+                saveFolderData();
+                return;
+            }
+            
             if (data.currentFolder && data.currentNote) {
                 const newTitle = document.getElementById('note-title').value.trim();
                 const body = document.getElementById('editor').value;
                 const oldTitle = data.currentNote;
+                
+                // If this was a pending new note and user has made ANY changes, clear the pending status
+                if (data.pendingNewNote && 
+                    data.pendingNewNote.folder === data.currentFolder && 
+                    data.pendingNewNote.note === oldTitle) {
+                    
+                    // Clear pending status if user has made meaningful changes
+                    const hasTitle = newTitle !== '' && newTitle !== 'New Note';
+                    const hasBody = body.trim() !== '';
+                    
+                    if (hasTitle || hasBody) {
+                        data.pendingNewNote = null;
+                    }
+                }
                 
                 // If title changed, we need to update the key in the data structure
                 if (newTitle !== oldTitle && newTitle !== '') {
@@ -792,9 +928,70 @@
                     
                     // Update current selection to new title
                     data.currentNote = newTitle;
+                    
+                    // Update pending new note reference if it exists
+                    if (data.pendingNewNote && data.pendingNewNote.note === oldTitle) {
+                        data.pendingNewNote.note = newTitle;
+                    }
                 } else {
                     // Title didn't change, just update the body
                     data.folders[data.currentFolder][data.currentNote].body = body;
+                }
+                
+                renderFolders(); // Update sidebar to show changes
+                updateDeleteButton(); // Update delete button tooltip
+                saveData();
+            }
+        }
+
+        function saveFolderData() {
+            if (data.currentFolder && data.selectedType === 'folder') {
+                const newName = document.getElementById('note-title').value.trim();
+                const description = document.getElementById('editor').value;
+                const oldName = data.currentFolder;
+                
+                // If this was a pending new folder and user has made changes, clear the pending status
+                if (data.pendingNewFolder === oldName) {
+                    const hasName = newName !== '' && newName !== 'New Folder';
+                    const hasDescription = description.trim() !== '';
+                    
+                    if (hasName || hasDescription) {
+                        data.pendingNewFolder = null;
+                    }
+                }
+                
+                // If folder name changed, we need to update the key in the data structure
+                if (newName !== oldName && newName !== '') {
+                    // Get the folder data
+                    const folderNotes = data.folders[oldName];
+                    const folderState = data.folderStates[oldName];
+                    
+                    // Delete the old keys
+                    delete data.folders[oldName];
+                    delete data.folderStates[oldName];
+                    delete data.folderMetadata[oldName];
+                    
+                    // Create new keys with updated data
+                    data.folders[newName] = folderNotes;
+                    data.folderStates[newName] = folderState;
+                    data.folderMetadata[newName] = {
+                        name: newName,
+                        description: description
+                    };
+                    
+                    // Update current selection to new name
+                    data.currentFolder = newName;
+                    
+                    // Update pending folder reference if it exists
+                    if (data.pendingNewFolder === oldName) {
+                        data.pendingNewFolder = newName;
+                    }
+                } else {
+                    // Name didn't change, just update the description
+                    if (!data.folderMetadata[data.currentFolder]) {
+                        data.folderMetadata[data.currentFolder] = { name: data.currentFolder, description: '' };
+                    }
+                    data.folderMetadata[data.currentFolder].description = description;
                 }
                 
                 renderFolders(); // Update sidebar to show changes
@@ -1023,6 +1220,84 @@
                 hideCommandPalette();
             }
         });
+
+        // Command palette
+        function showCommandPalette(query, position) {
+            const allNotes = [];
+            Object.keys(data.folders).forEach(folder => {
+                Object.keys(data.folders[folder]).forEach(noteTitle => {
+                    if (noteTitle !== data.currentNote) { // Don't show current note
+                        allNotes.push({
+                            folder,
+                            title: noteTitle,
+                            note: data.folders[folder][noteTitle]
+                        });
+                    }
+                });
+            });
+
+            // Fuzzy search
+            const filtered = allNotes.filter(item => 
+                item.title.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 5);
+
+            const palette = document.getElementById('command-palette');
+            
+            if (filtered.length === 0) {
+                palette.style.display = 'none';
+                paletteVisible = false;
+                return;
+            }
+
+            palette.innerHTML = '';
+            filtered.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'palette-item';
+                if (index === paletteIndex) div.classList.add('selected');
+                div.textContent = item.title;
+                div.onclick = () => insertReference(item.note);
+                palette.appendChild(div);
+            });
+
+            // Position palette
+            const editor = document.getElementById('editor');
+            const rect = editor.getBoundingClientRect();
+            const lines = editor.value.substr(0, position).split('\n');
+            const lineHeight = 22; // Approximate line height
+            
+            palette.style.display = 'block';
+            palette.style.left = '40px';
+            palette.style.top = (lines.length * lineHeight + 60) + 'px';
+            
+            paletteVisible = true;
+        }
+
+        function insertReference(note) {
+            const editor = document.getElementById('editor');
+            const pos = editor.selectionStart;
+            const text = editor.value;
+            
+            // Find the "/" character position
+            const beforeCursor = text.substr(0, pos);
+            const slashPos = beforeCursor.lastIndexOf('/');
+            
+            const reference = `{{${note.title}\n---\n${note.body}}}`;
+            const newText = text.substring(0, slashPos) + reference + text.substring(pos);
+            
+            editor.value = newText;
+            editor.focus();
+            editor.setSelectionRange(slashPos + reference.length, slashPos + reference.length);
+            
+            hideCommandPalette();
+            updatePreview();
+            saveCurrentNote();
+        }
+
+        function hideCommandPalette() {
+            document.getElementById('command-palette').style.display = 'none';
+            paletteVisible = false;
+            paletteIndex = -1;
+        }
 
         // Initialize app
         loadData();
