@@ -48,6 +48,21 @@
             flex-shrink: 0;
         }
 
+        .app-title {
+            cursor: pointer;
+            color: #2196f3;
+            transition: all 0.2s ease;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .app-title:hover {
+            background: #e3f2fd;
+            color: #1976d2;
+            transform: translateY(-1px);
+        }
+
         .sidebar-toggle {
             display: none;
             position: fixed;
@@ -444,29 +459,7 @@
             z-index: 1000;
         }
 
-        .help-button {
-            background: #2196f3;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-weight: 600;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 48px;
-            height: 48px;
-            font-size: 18px;
-            transition: all 0.2s ease;
-        }
 
-        .help-button:hover {
-            background: #1976d2;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
 
         .bottom-action-buttons {
             display: flex;
@@ -788,7 +781,7 @@
 <body>
     <div class="sidebar" id="sidebar">
         <h2>
-            <span>PromptRef</span>
+            <span class="app-title" onclick="showHelpModal()" title="Click for help & info">PromptRef</span>
         </h2>
         <div id="folders-container"></div>
     </div>
@@ -834,9 +827,6 @@
                 <span>Add</span>
             </button>
         </div>
-        <button class="help-button" onclick="showHelpModal()" title="Help & Info">
-            ?
-        </button>
     </div>
 
     <div id="help-modal" class="modal-overlay" onclick="hideHelpModal()">
