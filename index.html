@@ -775,12 +775,6 @@
 
         .preview-info {
             display: none;
-            background: #e3f2fd;
-            border: 1px solid #2196f3;
-            border-radius: 4px;
-            padding: 12px;
-            margin-bottom: 16px;
-            margin-top: 8px;
         }
 
         .preview-info p {
@@ -797,6 +791,17 @@
 
         .preview-pane.show .preview-info {
             display: block;
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 16px 20px;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            z-index: 1004;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
     </style>
 </head>
