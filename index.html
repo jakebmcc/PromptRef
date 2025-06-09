@@ -434,10 +434,17 @@
             transform: scale(1.05);
         }
 
-        .help-button {
+        .bottom-controls {
             position: fixed;
             bottom: 20px;
             left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+        }
+
+        .help-button {
             background: #2196f3;
             color: white;
             border: none;
@@ -446,7 +453,6 @@
             cursor: pointer;
             font-weight: 600;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -460,6 +466,85 @@
             background: #1976d2;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .bottom-action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .bottom-delete-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            color: #666;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .bottom-delete-button:hover {
+            background: #f0f0f0;
+            color: #d32f2f;
+        }
+
+        .bottom-delete-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.3;
+        }
+
+        .bottom-delete-button:disabled:hover {
+            background: none;
+            color: #666;
+        }
+
+        .bottom-add-folder-btn {
+            background: #2196f3;
+            color: white;
+            border: 1px solid #2196f3;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .bottom-add-folder-btn:hover {
+            background: #1976d2;
+            border-color: #1976d2;
+        }
+
+        .bottom-add-note-btn {
+            background: #2196f3;
+            color: white;
+            border: 1px solid #2196f3;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .bottom-add-note-btn:hover {
+            background: #1976d2;
+            border-color: #1976d2;
         }
 
         .modal-overlay {
@@ -704,19 +789,6 @@
     <div class="sidebar" id="sidebar">
         <h2>
             <span>PromptRef</span>
-            <div class="header-buttons">
-                <button id="delete-button" class="delete-button" onclick="deleteCurrentNote()" title="Delete selected note">
-                    🗑️
-                </button>
-                <button class="add-folder-header-btn" onclick="addNewFolder()" title="Add new folder">
-                    <span>📁</span>
-                    <span>Add</span>
-                </button>
-                <button class="add-note-header-btn" onclick="addNewNote()" title="Add new note">
-                    <span>📝</span>
-                    <span>Add</span>
-                </button>
-            </div>
         </h2>
         <div id="folders-container"></div>
     </div>
@@ -748,9 +820,24 @@
         <span id="copy-text">Copy</span>
     </button>
 
-    <button class="help-button" onclick="showHelpModal()" title="Help & Info">
-        ?
-    </button>
+    <div class="bottom-controls">
+        <div class="bottom-action-buttons">
+            <button id="bottom-delete-button" class="bottom-delete-button" onclick="deleteCurrentNote()" title="Delete selected note">
+                🗑️
+            </button>
+            <button class="bottom-add-folder-btn" onclick="addNewFolder()" title="Add new folder">
+                <span>📁</span>
+                <span>Add</span>
+            </button>
+            <button class="bottom-add-note-btn" onclick="addNewNote()" title="Add new note">
+                <span>📝</span>
+                <span>Add</span>
+            </button>
+        </div>
+        <button class="help-button" onclick="showHelpModal()" title="Help & Info">
+            ?
+        </button>
+    </div>
 
     <div id="help-modal" class="modal-overlay" onclick="hideHelpModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
@@ -1474,7 +1561,7 @@
         }
 
         function updateDeleteButton() {
-            const deleteBtn = document.getElementById('delete-button');
+            const deleteBtn = document.getElementById('bottom-delete-button');
             
             if (data.selectedType === 'folder' && data.currentFolder) {
                 deleteBtn.disabled = false;
