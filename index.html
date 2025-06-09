@@ -773,7 +773,29 @@
             z-index: 1003;
         }
 
+        .preview-info {
+            display: none;
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+            margin-top: 8px;
+        }
+
+        .preview-info p {
+            margin: 0;
+            font-size: 14px;
+            color: #1976d2;
+            text-align: center;
+            font-weight: 500;
+        }
+
         .preview-pane.show .preview-close {
+            display: block;
+        }
+
+        .preview-pane.show .preview-info {
             display: block;
         }
     </style>
@@ -804,6 +826,9 @@
         </div>
         <div class="preview-pane" id="preview-pane">
             <button class="preview-close" onclick="hidePreview()">✕ Close</button>
+            <div class="preview-info">
+                <p>📖 This is your markdown rendered as formatted text</p>
+            </div>
             <div id="preview" class="preview-content"></div>
         </div>
     </div>
